@@ -15,6 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from builtins import zip
+from builtins import range
+from builtins import object
 import logging
 from collections import defaultdict
 from androguard.decompiler.dad.opcode_ins import INSTRUCTION_SET
@@ -39,7 +42,7 @@ class BasicBlock(Node):
 
     def get_loc_with_ins(self):
         if self.loc_ins is None:
-            self.loc_ins = zip(range(*self.ins_range), self.ins)
+            self.loc_ins = list(zip(range(*self.ins_range), self.ins))
         return self.loc_ins
 
     def remove_ins(self, loc, ins):
@@ -122,7 +125,7 @@ class SwitchBlock(BasicBlock):
     def update_attribute_with(self, n_map):
         super(SwitchBlock, self).update_attribute_with(n_map)
         self.cases = [n_map.get(n, n) for n in self.cases]
-        for node1, node2 in n_map.iteritems():
+        for node1, node2 in n_map.items():
             if node1 in self.node_to_case:
                 self.node_to_case[node2] = self.node_to_case.pop(node1)
 
@@ -326,7 +329,7 @@ def build_node_from_block(block, vmap, gen_ret, exception_type=None):
             fillarray = block.get_special_ins(idx)
             lins.append(_ins(ins, vmap, fillarray))
         # invoke-kind[/range]
-        elif (0x6e <= opcode <= 0x72 or 0x74 <= opcode <= 0x78):
+        elif 0x6e <= opcode <= 0x72 or 0x74 <= opcode <= 0x78:
             lins.append(_ins(ins, vmap, gen_ret))
         # filled-new-array[/range]
         elif 0x24 <= opcode <= 0x25:

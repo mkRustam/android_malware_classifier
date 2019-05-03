@@ -15,7 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from builtins import object
 import androguard.decompiler.dad.util as util
+
 
 class IRForm(object):
     def __init__(self):
@@ -176,8 +178,11 @@ class ThisParam(Param):
     def __init__(self, value, atype):
         super(ThisParam, self).__init__(value, atype)
         self.this = True
+        self.super = False
 
     def visit(self, visitor):
+        if self.super:
+            return visitor.visit_super()
         return visitor.visit_this()
 
     def __str__(self):
@@ -330,7 +335,9 @@ class ArrayStoreInstruction(IRForm):
     def visit(self, visitor):
         v_m = self.var_map
         return visitor.visit_astore(v_m[self.array],
-                                    v_m[self.index], v_m[self.rhs], data=self)
+                                    v_m[self.index],
+                                    v_m[self.rhs],
+                                    data=self)
 
     def replace_var(self, old, new):
         if self.rhs == old:
@@ -366,8 +373,7 @@ class ArrayStoreInstruction(IRForm):
 
     def __str__(self):
         v_m = self.var_map
-        return '%s[%s] = %s' % (
-            v_m[self.array], v_m[self.index], v_m[self.rhs])
+        return '%s[%s] = %s' % (v_m[self.array], v_m[self.index], v_m[self.rhs])
 
 
 class StaticInstruction(IRForm):
@@ -442,7 +448,10 @@ class InstanceInstruction(IRForm):
     def visit(self, visitor):
         v_m = self.var_map
         return visitor.visit_put_instance(
-            v_m[self.lhs], self.name, v_m[self.rhs], data=self.atype)
+            v_m[self.lhs],
+            self.name,
+            v_m[self.rhs],
+            data=self.atype)
 
     def replace_var(self, old, new):
         if self.lhs == old:
@@ -512,7 +521,7 @@ class InvokeInstruction(IRForm):
             self.var_map[arg.v] = arg
 
         self.triple = triple
-        assert(triple[1] == name)
+        assert (triple[1] == name)
 
     def get_type(self):
         if self.name == '<init>':
@@ -584,26 +593,26 @@ class InvokeInstruction(IRForm):
     def __str__(self):
         v_m = self.var_map
         return '%s.%s(%s)' % (v_m[self.base], self.name,
-                                ', '.join('%s' % v_m[i] for i in self.args))
+                              ', '.join('%s' % v_m[i] for i in self.args))
 
 
 class InvokeRangeInstruction(InvokeInstruction):
     def __init__(self, clsname, name, rtype, ptype, args, triple):
         base = args.pop(0)
-        super(InvokeRangeInstruction, self).__init__(clsname, name, base,
-                                                    rtype, ptype, args, triple)
+        super(InvokeRangeInstruction, self).__init__(clsname, name, base, rtype,
+                                                     ptype, args, triple)
 
 
 class InvokeDirectInstruction(InvokeInstruction):
     def __init__(self, clsname, name, base, rtype, ptype, args, triple):
-        super(InvokeDirectInstruction, self).__init__(clsname, name, base,
-                                                    rtype, ptype, args, triple)
+        super(InvokeDirectInstruction, self).__init__(
+            clsname, name, base, rtype, ptype, args, triple)
 
 
 class InvokeStaticInstruction(InvokeInstruction):
     def __init__(self, clsname, name, base, rtype, ptype, args, triple):
-        super(InvokeStaticInstruction, self).__init__(clsname, name, base,
-                                                    rtype, ptype, args, triple)
+        super(InvokeStaticInstruction, self).__init__(
+            clsname, name, base, rtype, ptype, args, triple)
 
     def get_used_vars(self):
         v_m = self.var_map
@@ -1080,7 +1089,7 @@ class BinaryExpression(IRForm):
     def visit(self, visitor):
         v_m = self.var_map
         return visitor.visit_binary_expression(self.op, v_m[self.arg1],
-                                                        v_m[self.arg2])
+                                               v_m[self.arg2])
 
     def replace_var(self, old, new):
         if self.arg1 == old:
@@ -1122,7 +1131,7 @@ class BinaryCompExpression(BinaryExpression):
     def visit(self, visitor):
         v_m = self.var_map
         return visitor.visit_cond_expression(self.op, v_m[self.arg1],
-                                                      v_m[self.arg2])
+                                             v_m[self.arg2])
 
 
 class BinaryExpression2Addr(BinaryExpression):
@@ -1194,14 +1203,7 @@ class CastExpression(UnaryExpression):
         return 'CAST_%s(%s)' % (self.op, self.var_map[self.arg])
 
 
-CONDS = {
-    '==': '!=',
-    '!=': '==',
-    '<': '>=',
-    '<=': '>',
-    '>=': '<',
-    '>': '<=',
-}
+CONDS = {'==': '!=', '!=': '==', '<': '>=', '<=': '>', '>=': '<', '>': '<=', }
 
 
 class ConditionalExpression(IRForm):
@@ -1230,7 +1232,7 @@ class ConditionalExpression(IRForm):
     def visit(self, visitor):
         v_m = self.var_map
         return visitor.visit_cond_expression(self.op, v_m[self.arg1],
-                                                      v_m[self.arg2])
+                                             v_m[self.arg2])
 
     def replace_var(self, old, new):
         if self.arg1 == old:
@@ -1327,7 +1329,9 @@ class InstanceExpression(IRForm):
 
     def visit(self, visitor):
         return visitor.visit_get_instance(
-            self.var_map[self.arg], self.name, data=self.ftype)
+            self.var_map[self.arg],
+            self.name,
+            data=self.ftype)
 
     def replace_var(self, old, new):
         self.arg = new.v
